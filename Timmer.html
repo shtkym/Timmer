@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Timmer">
+    <title>Timmer - 30分集中</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1200px;
+            /* Increased from 900px */
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .main-panel {
+            flex: 3;
+            /* Ratio changed from 2:1 to 3:2 */
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            position: relative;
+            min-height: 400px;
+        }
+
+        .side-panel {
+            flex: 2;
+            /* Ratio changed from 2:1 to 3:2 to verify wider text area */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 20px;
+            min-width: 320px;
+            /* Increased from 280px */
+        }
+
+        /* Responsive */
+        @media (max-width: 800px) {
+            .app-container {
+                flex-direction: column-reverse;
+                /* Put side panel (ideas) below main on mobile? Or above? User said scroll is pain. Left side is main. Right is idea. On mobile usually Right goes below. */
+                /* User issue on mobile: "Vertical UI - scrolling is pain".
+                   If we stack, it's still vertical.
+                   The request was "Horizontal UI". On Desktop this is solved.
+                   On Mobile, maybe we keep Idea Box accessible via FAB or at bottom?
+                   Actually for "Horizontal UI", desktop is the main target for 2-columns.
+                   On mobile, standard stacking is acceptable if we organize better.
+                */
+                flex-direction: column;
+            }
+
+            .side-panel {
+                position: static;
+                width: 100%;
+            }
+
+            .main-panel {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        h1 {
+            font-size: 1.1rem;
+            color: #888;
+            margin: 0 0 10px 0;
+            font-weight: normal;
+        }
+
+        /* Daily Goal Header */
+        /* Daily Goal Header (Side Panel Style) */
+        .daily-goal-display {
+            background: #fff;
+            color: #333;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            font-weight: bold;
+            font-size: 0.95rem;
+            border-left: 5px solid #007AFF;
+            display: none;
+            /* hidden by default until set */
+        }
+
+        .daily-goal-label {
+            display: block;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 5px;
+            font-weight: normal;
+        }
+
+        /* Universal Idea Box (Side Panel) */
+        .universal-idea-box {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+            /* Prevent too long */
+        }
+
+        /* Sections */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .timer-display {
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: #333;
+            font-variant-numeric: tabular-nums;
+            margin: 20px 0;
+            letter-spacing: -2px;
+        }
+
+        .timer-display.overtime {
+            color: #FF3B30;
+        }
+
+        .current-task-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        /* Inputs */
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #007AFF;
+        }
+
+        /* Buttons */
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: #007AFF;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #34C759;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #FF3B30;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #eee;
+            color: #555;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid #eee;
+            color: #888;
+        }
+
+        /* Log List */
+        .log-list {
+            text-align: left;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-item {
+            padding: 10px;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 0.9rem;
+        }
+
+        .log-time {
+            color: #888;
+            font-size: 0.8rem;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .log-content {
+            font-weight: 500;
+        }
+
+        .log-planned {
+            color: #aaa;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+
+        /* Checkbox */
+        .checkbox-wrapper {
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Settings */
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #ccc;
+            padding: 0;
+            width: auto;
+        }
+
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .settings-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 350px;
+        }
+
+        /* Compact Log List for Timer View */
+        .log-list-compact {
+            text-align: left;
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        .log-item-compact {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .log-item-compact:last-child {
+            border-bottom: none;
+        }
+
+        .log-label {
+            font-weight: bold;
+            color: #555;
+            margin-right: 5px;
+        }
+
+        /* Idea Box FAB */
+        .fab-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #FF9500;
+            color: white;
+            font-size: 2rem;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .fab-btn:hover {
+            transform: scale(1.05);
+            background-color: #ffaa33;
+        }
+
+        .fab-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Idea Modal */
+        .idea-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 110;
+            backdrop-filter: blur(5px);
+        }
+
+        .idea-content {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 450px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .idea-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .idea-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #FF9500;
+        }
+
+        .idea-input-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #ideaInput {
+            width: 100%;
+            padding-right: 50px;
+            /* Space for mic button */
+            margin-bottom: 0;
+        }
+
+        .mic-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+            padding: 5px;
+        }
+
+        .mic-btn.listening {
+            color: #FF3B30;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translateY(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateY(-50%) scale(1.2);
+            }
+
+            100% {
+                transform: translateY(-50%) scale(1);
+            }
+        }
+
+        .idea-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .idea-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f9f9f9;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .idea-text {
+            flex-grow: 1;
+            margin-right: 10px;
+            overflow-wrap: break-word;
+            /* Ensure long words break */
+            min-width: 0;
+            /* Important for flex child with overflow */
+        }
+
+        .idea-actions {
+            display: flex;
+            gap: 5px;
+            flex-shrink: 0;
+            /* Prevent shrinking */
+        }
+
+        .idea-actions button {
+            width: auto;
+            padding: 5px 8px;
+            font-size: 0.75rem;
+            border-radius: 5px;
+            line-height: 1;
+            white-space: nowrap;
+            /* Prevent text wrapping inside button */
+        }
+
+        .btn-info {
+            background-color: #5856D6;
+            /* Purple for goal */
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- LEFT PANEL: Main Workflow -->
+        <main class="main-panel">
+            <button class="settings-btn" onclick="openSettings()">⚙️</button>
+            <h1>Timmer</h1>
+
+            <!-- 1. SETUP VIEW: Daily Goal Input (Only initially visible) -->
+            <div id="view-setup" class="section active">
+                <h2>今日の大目標は？</h2>
+                <input type="text" id="dailyGoalInput" placeholder="例: プレゼン資料を完成させる" autofocus>
+                <button class="btn-primary" onclick="setDailyGoal()">これを目指す</button>
+                <button class="btn-secondary" onclick="openSheet()">スプレッドシートを開く</button>
+            </div>
+
+            <!-- 2. PLAN VIEW: Next Task -->
+            <div id="view-plan" class="section">
+                <h2>次の30分で何をする？</h2>
+                <input type="text" id="nextTaskInput" placeholder="例: 構成案を書き出す">
+                <button class="btn-secondary" id="sameAsLastBtn" onclick="useLastTask()"
+                    style="display:none;">前回と同じ</button>
+                <button class="btn-primary" onclick="startWork()">スタート</button>
+                <button class="btn-outline" onclick="finishDay()">休憩・終了する</button>
+            </div>
+
+            <!-- 3. WORK VIEW: Timer -->
+            <div id="view-work" class="section">
+                <div class="current-task-display" id="workingTaskDisplay"></div>
+                <div class="timer-display" id="timer">30:00</div>
+                <button class="btn-success" id="finishTaskBtn" onclick="finishTask()">完了して記録へ</button>
+                <button class="btn-danger" id="stopTaskBtn" onclick="stopTimer()">中断（記録しない）</button>
+                <div id="workLogList" class="log-list" style="display: none;"></div>
+            </div>
+
+            <!-- 4. LOG VIEW: Result -->
+            <div id="view-log" class="section">
+                <h2>30分経過！</h2>
+                <div class="current-task-display" id="resultPagePlanDisplay"></div>
+                <p>実績を記録しましょう</p>
+                <input type="text" id="actualResultInput" placeholder="やったこと">
+                <button class="btn-success" onclick="saveLog()">記録して次へ</button>
+                <div id="resultLogList" class="log-list" style="display: none;"></div>
+            </div>
+
+            <!-- 5. SUMMARY VIEW: End of Day -->
+            <div id="view-summary" class="section">
+                <h2>お疲れ様でした！</h2>
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="goalAchievedCheck">
+                    <label for="goalAchievedCheck">大目標は達成できた？</label>
+                </div>
+                <button class="btn-primary" onclick="exportCSV()">記録をCSVで保存</button>
+                <button class="btn-success" onclick="syncData()" id="syncBtn">クラウドに保存</button>
+                <button class="btn-secondary" onclick="openSheet()">スプレッドシートを開く</button>
+                <button class="btn-outline" onclick="resetApp()">新しい一日を開始</button>
+
+                <div class="log-list" id="finalLogList"></div>
+            </div>
+
+            <!-- Settings Modal -->
+            <div id="settingsModal" class="settings-modal">
+                <div class="settings-content">
+                    <h2>設定</h2>
+                    <p>Google Apps Script URL</p>
+                    <input type="text" id="gasUrlInput" placeholder="https://script.google.com/..."
+                        style="font-size: 0.8rem;">
+                    <p>スプレッドシート URL</p>
+                    <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/..."
+                        style="font-size: 0.8rem;">
+                    <p>合言葉（パスワード）</p>
+                    <input type="password" id="gasPasswordInput" placeholder="設定した合言葉" style="font-size: 0.8rem;">
+                    <button class="btn-primary" onclick="saveSettings()">保存</button>
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+
+                    <button class="btn-outline" onclick="toggleQRCode()" style="width: 100%; font-size: 0.9rem;">📱
+                        モバイル起動用QR表示</button>
+                    <div id="qrCodeContainer" style="display:none; text-align: center; margin-top: 15px;">
+                        <img id="qrImage" src="" alt="QR Code"
+                            style="width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px;">
+                        <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                            ※注意: ローカルファイル(file://)の場合はスマホで開けません。<br>
+                            Webサーバー上にアップロードしてご利用ください。
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button class="btn-secondary" onclick="closeSettings()">閉じる</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT PANEL: Context & Capture -->
+        <aside class="side-panel">
+            <!-- 1. Daily Goal Display -->
+            <div id="dailyGoalDisplay" class="daily-goal-display">
+                <span class="daily-goal-label">今日の大目標</span>
+                <span id="dailyGoalText"></span>
+            </div>
+
+            <!-- 2. Universal Idea Box -->
+            <div class="universal-idea-box">
+                <h3>💡 気になること・アイデア</h3>
+                <div class="idea-input-wrapper">
+                    <input type="text" id="ideaInputUniversal" placeholder="思いついたことを入力..."
+                        onkeydown="handleIdeaInputKey(event, 'ideaInputUniversal')">
+                    <button class="mic-btn" onclick="toggleVoiceInput('ideaInputUniversal')">🎤</button>
+                </div>
+                <div class="idea-list" id="ideaListUniversal"></div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Data State
+        let state = {
+            dailyGoal: "",
+            currentTask: "",
+            lastTask: "",
+            logs: [], // { time, planned, actual, overtime }
+            endTime: null, // Timestamp for target end time
+            overtimeNotified: false,
+            timerId: null,
+            isRunning: false,
+            gasUrl: localStorage.getItem('timmer_gas_url') || "",
+            sheetUrl: localStorage.getItem('timmer_sheet_url') || "",
+            gasPassword: localStorage.getItem('timmer_gas_password') || "",
+            currentState: 'view-setup', // Save current view
+            ideas: [] // { text, created_at, source }
+        };
+
+        // Load saved state if exists
+        loadState();
+
+        // Audio
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start();
+            setTimeout(() => osc.stop(), 500);
+        }
+
+        // Navigation
+        function showView(viewId) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            state.currentState = viewId;
+            saveState();
+        }
+
+        // 1. Setup
+        function setDailyGoal() {
+            const input = document.getElementById('dailyGoalInput');
+            if (!input.value) return;
+
+            state.dailyGoal = input.value;
+            updateDailyGoalDisplay();
+
+            showView('view-plan');
+            document.getElementById('nextTaskInput').focus();
+            saveState();
+        }
+
+        function updateDailyGoalDisplay() {
+            const display = document.getElementById('dailyGoalDisplay');
+            const textSpan = document.getElementById('dailyGoalText');
+            if (state.dailyGoal) {
+                textSpan.innerText = state.dailyGoal;
+                display.style.display = 'block';
+            } else {
+                display.style.display = 'none';
+                textSpan.innerText = '';
+            }
+        }
+
+        // 2. Plan
+        function useLastTask() {
+            if (state.lastTask) {
+                document.getElementById('nextTaskInput').value = state.lastTask;
+            }
+        }
+
+        function startWork() {
+            const input = document.getElementById('nextTaskInput');
+            if (!input.value) return;
+
+            state.currentTask = input.value;
+            state.lastTask = input.value; // Save for "Same as Last"
+
+            // UI Update
+            document.getElementById('workingTaskDisplay').innerText = `作業中: ${state.currentTask}`;
+            document.getElementById('sameAsLastBtn').style.display = 'block'; // Enable button for next time
+
+            // Timer Start
+            const duration = 1800 * 1000; // 30 minutes
+            // const duration = 5 * 1000; // DEBUG MODE
+            state.endTime = Date.now() + duration;
+            state.overtimeNotified = false;
+
+            updateTimerDisplay();
+            updateTimerDisplay();
+            renderLogList('workLogList', 'これまでの記録');
+            showView('view-work');
+            showView('view-work');
+
+            showView('view-work');
+
+            // Reset buttons
+            // document.getElementById('finishTaskBtn').style.display = 'none'; // Always show now
+            document.getElementById('stopTaskBtn').style.display = 'block';
+            document.getElementById('timer').classList.remove('overtime');
+
+            saveState();
+
+            // Notification: Ask only once
+            const notifAsked = localStorage.getItem('timmer_notif_asked');
+            if (!notifAsked && Notification.permission !== "granted") {
+                Notification.requestPermission().then(() => {
+                    localStorage.setItem('timmer_notif_asked', 'true');
+                });
+            }
+
+            state.isRunning = true;
+            state.timerId = setInterval(() => {
+                updateTimerDisplay();
+                // Check for overtime transition
+                const now = Date.now();
+                if (now >= state.endTime && !state.overtimeNotified) {
+                    timeUp();
+                }
+            }, 200);
+        }
+
+        function updateTimerDisplay() {
+            const now = Date.now();
+            let diff = state.endTime - now;
+
+            // Overtime handling
+            if (diff < 0) {
+                diff = Math.abs(diff);
+                document.getElementById('timer').classList.add('overtime');
+                // Show +MM:SS
+                const m = Math.floor(diff / 60000).toString().padStart(2, '0');
+                const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                document.getElementById('timer').innerText = `+${m}:${s}`;
+            } else {
+                // Normal countdown
+                const m = Math.floor(diff / 60000).toString().padStart(2, '0');
+                const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                document.getElementById('timer').innerText = `${m}:${s}`;
+            }
+        }
+
+        function finishDay() {
+            function finishDay() {
+                renderLogList('finalLogList');
+                showView('view-summary');
+            }
+            showView('view-summary');
+        }
+
+        // 3. Work -> 4. Log
+        function stopTimer() {
+            clearInterval(state.timerId);
+            state.isRunning = false;
+            saveState();
+            // Manual stop goes to Plan view (pause/cancel) or Summary?
+            // User asked for "Stop" -> "End Day" flow seems appropriate or just pause.
+            // Let's treat "Stop" as "Pause/Cancel current cycle" -> Go back to Plan
+            if (confirm("タイマーを停止しました。今日の作業を終了しますか？\n（キャンセルを押すと計画画面に戻ります）")) {
+                finishDay();
+            } else {
+                showView('view-plan');
+            }
+        }
+
+        function timeUp() {
+            state.overtimeNotified = true;
+            saveState();
+            playBeep();
+            if (Notification.permission === "granted") {
+                new Notification("30分経過！", { body: "超過時間の計測を開始します" });
+            }
+
+            // Show finish button
+            // document.getElementById('finishTaskBtn').style.display = 'block'; // Always visible
+            document.getElementById('stopTaskBtn').style.display = 'none'; // Hide stop button on overtime? Or keep it?
+            // Let's hide stop button when time is up, as "Finish" is the only logical action then (or maybe not?)
+            // Actually, user might still want to "Cancel" even if overtime?
+            // But for now, let's keep the previous behavior of hiding stop button on overtime to reduce clutter,
+            // or we can keep both. The previous code hid it.
+            document.getElementById('stopTaskBtn').style.display = 'none';
+        }
+
+        function finishTask() {
+            clearInterval(state.timerId);
+            state.isRunning = false;
+            saveState();
+
+            document.getElementById('resultPagePlanDisplay').innerText = `計画: ${state.currentTask}`;
+            renderLogList('resultLogList', 'これまでの記録');
+            showView('view-log');
+            document.getElementById('actualResultInput').focus();
+        }
+
+        // 4. Log -> Plan
+        function saveLog() {
+            const input = document.getElementById('actualResultInput');
+            const actual = input.value || state.currentTask;
+
+            const now = new Date();
+            const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+            // Calculate overtime
+            let overtimeMin = 0;
+            const nowTs = Date.now();
+            if (state.endTime && nowTs > state.endTime) {
+                const diff = nowTs - state.endTime;
+                overtimeMin = Math.floor(diff / 60000);
+            }
+
+            state.logs.push({
+                time: timeStr,
+                planned: state.currentTask,
+                actual: actual,
+                overtime: overtimeMin
+            });
+
+            // Clear inputs
+            document.getElementById('nextTaskInput').value = '';
+            input.value = '';
+
+            showView('view-plan');
+            document.getElementById('nextTaskInput').focus();
+            saveState();
+        }
+
+        // 5. Summary
+        function renderLogList(containerId, title = null) {
+            const list = document.getElementById(containerId);
+            if (!list) return;
+
+            if (state.logs.length === 0) {
+                list.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            list.style.display = 'block';
+            list.innerHTML = '';
+
+            if (title) {
+                list.innerHTML += `<strong>${title}</strong>`;
+            }
+
+            // Reverse order (newest first)
+            [...state.logs].reverse().forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'log-item';
+
+                let actualDisplay = log.actual;
+                if (log.overtime && log.overtime > 0) {
+                    actualDisplay += ` <span style="color:#FF3B30; font-size:0.9em;">(+${log.overtime}分)</span>`;
+                }
+
+                item.innerHTML = `
+                    <span class="log-time">${log.time}</span>
+                    <div><span class="log-label">計画:</span> ${log.planned}</div>
+                    <div><span class="log-label">結果:</span> ${actualDisplay}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function exportCSV() {
+            const achieved = document.getElementById('goalAchievedCheck').checked ? "達成" : "未達成";
+            const dateStr = new Date().toLocaleDateString();
+
+            let csv = "\uFEFF"; // BOM
+            csv += `日付,${dateStr}\n`;
+            csv += `今日の大目標,${state.dailyGoal},${achieved}\n\n`;
+            csv += `時間,実績,計画,超過時間(分)\n`;
+
+            state.logs.forEach(log => {
+                const ov = log.overtime || 0;
+                csv += `${log.time},"${log.actual.replace(/"/g, '""')}","${log.planned.replace(/"/g, '""')}",${ov}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+
+            const now = new Date();
+            const fileDate = `${now.getFullYear()}${now.getMonth() + 1}${now.getDate()}`;
+            link.download = `timmer_log_${fileDate}.csv`;
+            link.click();
+        }
+
+        function syncData() {
+            if (!state.gasUrl) {
+                alert("設定から連携用URLを入力してください");
+                openSettings();
+                return;
+            }
+
+            const btn = document.getElementById('syncBtn');
+            const originalText = btn.innerText;
+            btn.innerText = "送信中...";
+            btn.disabled = true;
+
+            const payload = {
+                date: new Date().toLocaleDateString(),
+                dailyGoal: state.dailyGoal,
+                goalAchieved: document.getElementById('goalAchievedCheck').checked,
+                logs: state.logs,
+                logs: state.logs,
+                ideas: state.ideas, // Sync ideas
+                password: state.gasPassword
+            };
+
+            fetch(state.gasUrl, {
+                method: 'POST',
+                mode: 'no-cors', // CORSエラー回避のためno-corsを使用
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(() => {
+                    // no-corsモードではレスポンスの中身（成功/失敗）は読めませんが、
+                    // ネットワークエラーが起きなければここに来ます。
+                    // GAS側が正しければ保存されています。
+                    alert("送信しました！\n（スプレッドシートをご確認ください）");
+                    btn.innerText = "送信完了";
+                })
+                .catch(err => {
+                    alert("送信エラー: " + err);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                });
+        }
+
+        function openSheet() {
+            if (!state.sheetUrl) {
+                alert("設定からスプレッドシートのURLを入力してください");
+                openSettings();
+                return;
+            }
+            window.open(state.sheetUrl, '_blank');
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'flex';
+            document.getElementById('gasUrlInput').value = state.gasUrl;
+            document.getElementById('sheetUrlInput').value = state.sheetUrl;
+            document.getElementById('gasPasswordInput').value = state.gasPassword;
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            const url = document.getElementById('gasUrlInput').value;
+            const sheetUrl = document.getElementById('sheetUrlInput').value;
+            const pass = document.getElementById('gasPasswordInput').value;
+
+            state.gasUrl = url;
+            state.sheetUrl = sheetUrl;
+            state.gasPassword = pass;
+
+            localStorage.setItem('timmer_gas_url', url);
+            localStorage.setItem('timmer_sheet_url', sheetUrl);
+            localStorage.setItem('timmer_gas_password', pass);
+
+            closeSettings();
+            alert("設定を保存しました");
+        }
+
+        function resetApp(skipConfirm = false) {
+            if (!skipConfirm && !confirm("本当にリセットしますか？これまでの記録も消去されます。")) {
+                return;
+            }
+            clearInterval(state.timerId);
+            state = {
+                dailyGoal: "",
+                currentTask: "",
+                lastTask: "",
+                logs: [],
+                endTime: null,
+                overtimeNotified: false,
+                timerId: null,
+                isRunning: false,
+                gasUrl: state.gasUrl, // Keep URL
+                sheetUrl: state.sheetUrl, // Keep Sheet URL
+                gasPassword: state.gasPassword, // Keep Password
+                currentState: 'view-setup',
+                ideas: []
+            };
+            saveState();
+
+            // UI Reset
+            updateDailyGoalDisplay();
+            document.getElementById('dailyGoalInput').value = '';
+            document.getElementById('nextTaskInput').value = '';
+            document.getElementById('actualResultInput').value = '';
+
+            // Clear Logs
+            const logContainers = ['workLogList', 'resultLogList', 'finalLogList'];
+            logContainers.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerHTML = '';
+                    el.style.display = 'none';
+                }
+            });
+
+            showView('view-setup');
+        }
+
+        // Persistence
+        function saveState() {
+            const dataToSave = {
+                dailyGoal: state.dailyGoal,
+                currentTask: state.currentTask,
+                lastTask: state.lastTask,
+                logs: state.logs,
+                endTime: state.endTime,
+                overtimeNotified: state.overtimeNotified,
+                currentState: state.currentState,
+                ideas: state.ideas
+            };
+            localStorage.setItem('timmer_state', JSON.stringify(dataToSave));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('timmer_state');
+            if (saved) {
+                const data = JSON.parse(saved);
+                state.dailyGoal = data.dailyGoal || "";
+                state.currentTask = data.currentTask || "";
+                state.lastTask = data.lastTask || "";
+                state.logs = data.logs || [];
+                state.endTime = data.endTime || null;
+                state.overtimeNotified = data.overtimeNotified || false;
+                state.currentState = data.currentState || 'view-setup';
+                state.ideas = data.ideas || [];
+
+                // Stale Session Check (Auto Reset if > 12 hours overtime)
+                if (state.endTime) {
+                    const now = Date.now();
+                    const overtime = now - state.endTime;
+                    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+
+                    if (overtime > TWELVE_HOURS) {
+                        alert("前回のタイマーから長時間経過したため、リセットしました。");
+                        resetApp(true); // true = skip confirm
+                        return; // Stop further loading as state has been reset
+                    }
+                }
+
+                // Restore UI
+                updateDailyGoalDisplay();
+                if (state.currentTask) {
+                    document.getElementById('workingTaskDisplay').innerText = `作業中: ${state.currentTask}`;
+                    document.getElementById('sameAsLastBtn').style.display = 'block';
+                }
+                updateTimerDisplay();
+                updateTimerDisplay();
+                renderLogList('workLogList', 'これまでの記録');
+
+                // If timer was running, we might want to pause it or resume?
+                // For simplicity, let's load it as paused but with the correct time left.
+                // User can click start/resume if they want.
+                // But wait, if they reload during work, they expect it to continue?
+                // Let's just show the correct view.
+
+                showView(state.currentState);
+
+                // If we are in work view, maybe we should auto-resume?
+                // Let's keep it paused for safety, user has to click start? 
+                // Actually, 'view-work' doesn't have a start button visible (only stop).
+                // So we should restart the interval if we are in 'view-work'.
+                if (state.currentState === 'view-work') {
+                    state.isRunning = true;
+
+                    // Check button state
+                    const now = Date.now();
+                    if (state.endTime && now >= state.endTime) {
+                        // document.getElementById('finishTaskBtn').style.display = 'block'; // Always visible
+                        document.getElementById('stopTaskBtn').style.display = 'none';
+                        document.getElementById('timer').classList.add('overtime');
+                    } else {
+                        // document.getElementById('finishTaskBtn').style.display = 'none'; // Always visible
+                        document.getElementById('stopTaskBtn').style.display = 'block';
+                        document.getElementById('timer').classList.remove('overtime');
+                    }
+
+                    state.timerId = setInterval(() => {
+                        updateTimerDisplay();
+                        const currentNow = Date.now();
+                        if (state.endTime && currentNow >= state.endTime && !state.overtimeNotified) {
+                            timeUp();
+                        }
+                    }, 200);
+                }
+            }
+        }
+
+        // Idea Box Logic
+        // open/close Modal functions REMOVED
+
+        function handleIdeaInputKey(event, inputId) {
+            if (event.key === 'Enter') {
+                addIdea(inputId);
+            }
+        }
+
+        function addIdea(inputId) {
+            const input = document.getElementById(inputId);
+            const text = input.value.trim();
+            if (!text) return;
+
+            const newIdea = {
+                text: text,
+                created_at: Date.now(),
+                source: 'manual'
+            };
+
+            if (!state.ideas) state.ideas = [];
+            state.ideas.push(newIdea);
+            input.value = '';
+            saveState();
+            renderIdeaList();
+        }
+
+        function deleteIdea(index) {
+            state.ideas.splice(index, 1);
+            saveState();
+            renderIdeaList();
+        }
+
+        function promoteIdea(index) {
+            const idea = state.ideas[index];
+            document.getElementById('nextTaskInput').value = idea.text;
+
+            // If we are in setup or summary, go to plan, unless we stop in work view?
+            // User requested that "Use" -> moves to task.
+            // If we are currently in Work view, maybe we should NOT switch view?
+            // "Idea Box" is now universal.
+            // If I am working, and I think of something for NEXT task, I click "Use".
+            // It puts text in 'nextTaskInput' (Plan View).
+            // But I am in Work View.
+            // Should I stay in Work View?
+            // Yes, user wants to capture and queue it.
+            // So we only switch view if NOT in work view.
+
+            if (state.currentState !== 'view-work') {
+                showView('view-plan');
+            } else {
+                // Flash feedback or something?
+                // For now just stay.
+                alert(`「${idea.text}」を次のタスク入力欄にセットしました`);
+            }
+
+            // Remove from idea list?
+            deleteIdea(index);
+        }
+
+        function promoteIdeaToGoal(index) {
+            const idea = state.ideas[index];
+            state.dailyGoal = idea.text;
+            updateDailyGoalDisplay();
+            saveState(); // Save the new daily goal
+
+            alert(`「${idea.text}」を今日の大目標に設定しました`);
+            deleteIdea(index);
+        }
+
+        function renderIdeaList() {
+            const list = document.getElementById('ideaListUniversal');
+            if (!list) return;
+
+            list.innerHTML = '';
+
+            if (!state.ideas) state.ideas = [];
+
+            // Reverse order
+            [...state.ideas].reverse().forEach((idea, originalIndex) => {
+                const index = state.ideas.length - 1 - originalIndex;
+
+                const item = document.createElement('div');
+                item.className = 'idea-item';
+                item.innerHTML = `
+                    <span class="idea-text">${idea.text}</span>
+                    <div class="idea-actions">
+                        <button class="btn-primary" onclick="promoteIdea(${index})" title="次のタスクにする">タスク</button>
+                        <button class="btn-info" onclick="promoteIdeaToGoal(${index})" title="今日の大目標にする">目標</button>
+                        <button class="btn-danger" onclick="deleteIdea(${index})" title="削除">×</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Voice Input
+        let recognition;
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'ja-JP';
+            recognition.interimResults = false;
+
+            recognition.onresult = function (event) {
+                const transcript = event.results[0][0].transcript;
+                if (window.activeVoiceInputId) {
+                    const input = document.getElementById(window.activeVoiceInputId);
+                    if (input) {
+                        input.value = transcript;
+                        addIdea(window.activeVoiceInputId);
+                    }
+                }
+            };
+        }
+
+        function toggleVoiceInput(inputId) {
+            if (!recognition) {
+                alert("このブラウザは音声入力に対応していません (Chrome/Edge推奨)");
+                return;
+            }
+            window.activeVoiceInputId = inputId;
+            window.activeVoiceInputId = inputId;
+            recognition.start();
+        }
+
+        // QR Code
+        function toggleQRCode() {
+            const container = document.getElementById('qrCodeContainer');
+            const img = document.getElementById('qrImage');
+
+            if (container.style.display === 'none') {
+                const url = window.location.href;
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>
