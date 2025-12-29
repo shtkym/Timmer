@@ -417,24 +417,31 @@
             margin-bottom: 20px;
         }
 
-        #ideaInput {
+        #ideaInput,
+        #ideaInputUniversal {
             width: 100%;
             padding-right: 50px;
             /* Space for mic button */
             margin-bottom: 0;
+            box-sizing: border-box;
+            /* Explicitly ensure padding is handled */
         }
 
         .mic-btn {
             position: absolute;
-            right: 10px;
+            right: 15px;
+            /* Slights adjust for better alignment */
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
+            /* Adjusted for better fit */
             cursor: pointer;
             color: #888;
             padding: 5px;
+            z-index: 10;
+            /* Ensure button is above input */
         }
 
         .mic-btn.listening {
